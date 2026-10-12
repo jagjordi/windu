@@ -1,0 +1,17 @@
+# Normalise text to LF in the repository and check it out native on each platform.
+* text=auto
+
+*.cs      text diff=csharp
+*.csproj  text
+*.sln     text eol=crlf
+*.md      text
+*.yml     text
+*.json    text
+
+# Shell scripts must keep LF even when checked out on Windows.
+*.sh      text eol=lf
+
+*.png     binary
+*.ico     binary
+*.exe     binary
+*.zip     binary

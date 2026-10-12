@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DCBC8605-A671-40F8-B083-E229311270B8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Windu", "src\Windu\Windu.csproj", "{0DB597A9-F5EB-4405-A2C1-2FD9EBE91A60}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{E5DF9202-B87B-47A6-AFD4-E38F4780192A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Windu.Tests", "tests\Windu.Tests\Windu.Tests.csproj", "{046B32A7-D8D1-44CC-9371-4F1496FE2940}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0DB597A9-F5EB-4405-A2C1-2FD9EBE91A60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0DB597A9-F5EB-4405-A2C1-2FD9EBE91A60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0DB597A9-F5EB-4405-A2C1-2FD9EBE91A60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0DB597A9-F5EB-4405-A2C1-2FD9EBE91A60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{046B32A7-D8D1-44CC-9371-4F1496FE2940}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{046B32A7-D8D1-44CC-9371-4F1496FE2940}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{046B32A7-D8D1-44CC-9371-4F1496FE2940}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{046B32A7-D8D1-44CC-9371-4F1496FE2940}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0DB597A9-F5EB-4405-A2C1-2FD9EBE91A60} = {DCBC8605-A671-40F8-B083-E229311270B8}
+		{046B32A7-D8D1-44CC-9371-4F1496FE2940} = {E5DF9202-B87B-47A6-AFD4-E38F4780192A}
+	EndGlobalSection
+EndGlobal

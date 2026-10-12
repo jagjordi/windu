@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore Windu.sln
+
+      - name: Build
+        run: dotnet build Windu.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/Windu.Tests/Windu.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      # The TUI is the point of the program, so prove the real rendering code
+      # still draws a correct listing rather than only that the unit tests pass.
+      - name: Smoke-test the renderer
+        shell: pwsh
+        run: |
+          $exe = "src/Windu/bin/Release/net8.0/windu.exe"
+          $lines = & $exe -q . --render "" --render-size 100x20
+          if ($LASTEXITCODE -ne 0) { throw "windu exited with $LASTEXITCODE" }
+          $lines
+          # Join first: -match against an array filters it instead of returning a boolean.
+          $out = $lines -join "`n"
+          if ($out -notmatch 'Total disk usage') { throw "footer missing from the rendered listing" }
+          if ($out -notmatch '\[#+\s*\]')        { throw "size graph missing from the rendered listing" }
+          if ($out -notmatch 'windu \d+\.\d+\.\d+') { throw "header missing from the rendered listing" }
+
+      - name: Verify the export round-trips
+        shell: pwsh
+        run: |
+          $exe = "src/Windu/bin/Release/net8.0/windu.exe"
+          & $exe -q -o scan1.json .
+          & $exe -f scan1.json -o scan2.json
+          # Only the embedded timestamp may differ, so compare from the tree onward.
+          $a = Get-Content scan1.json -Raw
+          $b = Get-Content scan2.json -Raw
+          $a = $a.Substring($a.IndexOf('},'))
+          $b = $b.Substring($b.IndexOf('},'))
+          if ($a -ne $b) { throw "re-importing an export did not reproduce the same tree" }
+          "round-trip OK"

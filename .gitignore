@@ -1,0 +1,29 @@
+## Build output
+bin/
+obj/
+dist/
+
+## Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+
+## Test and coverage results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+coverage*.json
+coverage*.xml
+*.opencover.xml
+
+## NuGet
+*.nupkg
+packages/
+
+## OS cruft
+Thumbs.db
+desktop.ini
+.DS_Store
