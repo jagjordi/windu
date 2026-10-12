@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MSI definition for windu.
+
+  The UpgradeCode below identifies the product across all versions and must
+  never change: it is what lets a new MSI replace an older install instead of
+  sitting beside it in Add/Remove Programs. The ProductCode (Package/@Id) is
+  regenerated per build, which is what a major upgrade expects.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package Name="windu"
+           Manufacturer="Jordi Altayó"
+           Version="$(var.ProductVersion)"
+           UpgradeCode="6f3b0c91-57a8-4e0d-9d4f-2a7c1b8e5d30"
+           Scope="perMachine"
+           Compressed="yes"
+           InstallerVersion="500">
+
+    <SummaryInformation Description="windu $(var.ProductVersion) - a disk usage analyzer for Windows"
+                        Manufacturer="Jordi Altayó" />
+
+    <!-- Block installing an older build over a newer one. -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of windu is already installed. Uninstall it first to install this older version." />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- windu is a terminal program: 64-bit Windows is the only target. -->
+    <Launch Condition="VersionNT64"
+            Message="windu requires a 64-bit version of Windows." />
+
+    <Icon Id="WinduIcon" SourceFile="$(var.IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="WinduIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/jagjordi/windu" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/jagjordi/windu" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="windu" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="WinduExe" Guid="c4e81d27-9a63-4f15-b8e2-7d051a6c3f84" Bitness="always64">
+        <File Id="windu.exe" Source="$(var.ExePath)" KeyPath="yes" />
+
+        <!-- Put windu on the PATH for every user, and take it back off on
+             uninstall. Permanent="no" is the default but stated here because
+             leaving a stale PATH entry behind is a common installer bug. -->
+        <Environment Id="PathEntry"
+                     Name="PATH"
+                     Value="[INSTALLFOLDER]"
+                     Action="set"
+                     Part="last"
+                     System="yes"
+                     Permanent="no" />
+      </Component>
+
+      <Component Id="Docs" Guid="2b9f6a40-8c17-4d53-a0e6-91f3b7c2d865" Bitness="always64">
+        <File Id="README.md" Source="$(var.ReadmePath)" KeyPath="yes" />
+        <File Id="LICENSE" Source="$(var.LicensePath)" />
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="Main" Title="windu" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtfPath)" />
+
+  </Package>
+</Wix>

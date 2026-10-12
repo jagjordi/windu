@@ -25,8 +25,29 @@ windu 1.0.0 ~ Use the arrow keys to navigate, press ? for help
 
 ## Installing
 
-Grab a build from the [latest release](https://github.com/jagjordi/windu/releases/latest).
-Each archive holds a single `windu.exe` — unzip it anywhere and run it.
+Download `windu-<version>-win-x64.msi` from the
+[latest release](https://github.com/jagjordi/windu/releases/latest) and
+double-click it. It installs to `C:\Program Files\windu`, puts `windu` on your
+`PATH`, and registers in Add/Remove Programs, so a new terminal gives you:
+
+```powershell
+windu "C:\Program Files"
+```
+
+Take the `win-arm64.msi` instead on Arm64 Windows. To install unattended:
+
+```powershell
+msiexec /i windu-<version>-win-x64.msi /qn
+```
+
+The installer is unsigned, so SmartScreen warns the first time — choose
+**More info → Run anyway**. Uninstall from Add/Remove Programs; it removes the
+`PATH` entry with it.
+
+### Or just the executable
+
+If you would rather not install anything, each release also ships a zip holding
+a single `windu.exe` that writes nothing outside the folder you unpack it into.
 
 | Asset | Needs .NET 8 installed? |
 | --- | --- |
@@ -35,8 +56,8 @@ Each archive holds a single `windu.exe` — unzip it anywhere and run it.
 | `windu-<version>-win-x64-framework-dependent.zip` | Yes — ~200 KB |
 | `windu-<version>-win-arm64-framework-dependent.zip` | Yes — ~200 KB |
 
-Take a self-contained build unless .NET 8 is already installed and size matters.
-Downloads can be verified against the `SHA256SUMS.txt` published with each release.
+Every download can be verified against the `SHA256SUMS.txt` published with the
+release.
 
 ## Building
 
@@ -52,6 +73,16 @@ single self-contained file:
 ```bash
 dotnet publish src/Windu/Windu.csproj -c Release -r win-x64 --self-contained
 ```
+
+To build the MSI exactly as the release workflow does (this installs the WiX
+tool on first run):
+
+```powershell
+./installer/build-msi.ps1 -Version 1.1.0 -Runtime win-x64 -Output dist
+```
+
+The installer pins [WiX](https://wixtoolset.org/) 5, the last release under the
+MS-RL; WiX 7 requires accepting the Open Source Maintenance Fee EULA.
 
 ## Usage
 

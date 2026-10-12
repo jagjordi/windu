@@ -109,9 +109,97 @@ jobs:
           path: ${{ steps.name.outputs.name }}.zip
           retention-days: 7
 
+  msi:
+    name: Build the ${{ matrix.rid }} installer
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Work out the version
+        id: version
+        shell: pwsh
+        run: |
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            $v = '${{ github.event.inputs.version }}'
+          } else {
+            $v = '${{ github.ref_name }}' -replace '^v', ''
+          }
+          if ($v -notmatch '^\d+\.\d+\.\d+$') {
+            throw "version '$v' is not in the form MAJOR.MINOR.PATCH"
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Build the MSI
+        shell: pwsh
+        run: ./installer/build-msi.ps1 -Version ${{ steps.version.outputs.version }} -Runtime ${{ matrix.rid }} -Output dist
+
+      # An MSI that installs but leaves a stale PATH entry or an orphaned
+      # Add/Remove entry behind is worse than no installer, so exercise the
+      # whole lifecycle on the runner, which is already elevated.
+      - name: Install, check, uninstall
+        if: matrix.rid == 'win-x64'
+        shell: pwsh
+        run: |
+          $msi = "dist/windu-${{ steps.version.outputs.version }}-win-x64.msi"
+          $msiFull = (Resolve-Path $msi).Path
+
+          $p = Start-Process msiexec -ArgumentList '/i', "`"$msiFull`"", '/qn', '/norestart', '/l*v', 'install.log' -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            Get-Content install.log -Tail 40
+            throw "install failed with $($p.ExitCode)"
+          }
+
+          $installed = "$env:ProgramFiles\windu\windu.exe"
+          if (-not (Test-Path $installed)) { throw "windu.exe was not installed" }
+
+          $reported = & $installed --version
+          if ($reported -notmatch '${{ steps.version.outputs.version }}') {
+            throw "installed binary reports '$reported'"
+          }
+
+          $machinePath = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
+          if (($machinePath -split ';') -notcontains "$env:ProgramFiles\windu\") {
+            throw "the installer did not add windu to the system PATH"
+          }
+
+          $arp = Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\* |
+                 Where-Object DisplayName -eq 'windu'
+          if (-not $arp) { throw "no Add/Remove Programs entry was created" }
+          "Add/Remove entry: $($arp.DisplayName) $($arp.DisplayVersion)"
+
+          $p = Start-Process msiexec -ArgumentList '/x', "`"$msiFull`"", '/qn', '/norestart', '/l*v', 'uninstall.log' -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            Get-Content uninstall.log -Tail 40
+            throw "uninstall failed with $($p.ExitCode)"
+          }
+
+          if (Test-Path "$env:ProgramFiles\windu") { throw "uninstall left the install folder behind" }
+          $machinePath = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
+          if (($machinePath -split ';') -contains "$env:ProgramFiles\windu\") {
+            throw "uninstall left a stale PATH entry behind"
+          }
+          "install/uninstall lifecycle OK"
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: windu-${{ steps.version.outputs.version }}-${{ matrix.rid }}-msi
+          path: dist/*.msi
+          retention-days: 7
+
   release:
     name: Publish the release
-    needs: build
+    needs: [build, msi]
     runs-on: ubuntu-latest
 
     steps:
@@ -134,11 +222,11 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
       # Checksums let people verify a download, and cost nothing to publish.
-      - name: Checksum the archives
+      - name: Checksum the downloads
         working-directory: artifacts
         run: |
           ls -la
-          sha256sum *.zip > SHA256SUMS.txt
+          sha256sum *.zip *.msi > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Create the release
@@ -147,7 +235,26 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           cat > notes.md <<'EOF'
-          ## Downloads
+          ## Install
+
+          Download `windu-VERSION-win-x64.msi` and double-click it. It installs
+          to `C:\Program Files\windu`, adds itself to your `PATH`, and appears in
+          Add/Remove Programs — so after opening a new terminal you can just run:
+
+          ```powershell
+          windu "C:\Program Files"
+          ```
+
+          On Arm64 Windows, take `windu-VERSION-win-arm64.msi` instead.
+
+          The installer is unsigned, so SmartScreen will warn on first run:
+          choose **More info → Run anyway**. To install without the UI:
+
+          ```powershell
+          msiexec /i windu-VERSION-win-x64.msi /qn
+          ```
+
+          ## Or just take the executable
 
           | Asset | Needs .NET 8 installed? |
           | --- | --- |
@@ -157,18 +264,12 @@ jobs:
           | `windu-VERSION-win-arm64-framework-dependent.zip` | Yes — ~200 KB |
 
           Each archive holds a single `windu.exe`; unzip it anywhere and run it.
-          Take a self-contained build unless .NET 8 is already installed and size matters.
+          Nothing is written outside the folder you unpack into.
 
-          Verify a download against `SHA256SUMS.txt`:
-
-          ```powershell
-          Get-FileHash windu-VERSION-win-x64.zip -Algorithm SHA256
-          ```
-
-          ## Usage
+          Verify any download against `SHA256SUMS.txt`:
 
           ```powershell
-          windu.exe "C:\Program Files"
+          Get-FileHash windu-VERSION-win-x64.msi -Algorithm SHA256
           ```
 
           Press `?` inside the browser for the key bindings.
@@ -176,6 +277,7 @@ jobs:
           sed -i "s/VERSION/${VERSION}/g" notes.md
 
           gh release create "v${VERSION}" \
+            artifacts/*.msi \
             artifacts/*.zip \
             artifacts/SHA256SUMS.txt \
             --title "windu ${VERSION}" \
