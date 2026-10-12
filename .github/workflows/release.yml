@@ -103,7 +103,7 @@ jobs:
           Compress-Archive -Path staging/* -DestinationPath '${{ steps.name.outputs.name }}.zip'
           Get-ChildItem *.zip | ForEach-Object { "{0,12:N0}  {1}" -f $_.Length, $_.Name }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{ steps.name.outputs.name }}
           path: ${{ steps.name.outputs.name }}.zip
